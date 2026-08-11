@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { paymentService } from "@/services/payment.service";
+import { bookingService } from "@/services/booking.service";
 import { PaymentItem } from "@/types";
 import { ArrowRight, CreditCard, ShieldCheck } from "lucide-react";
 
@@ -29,9 +30,38 @@ function getMeta(payment: PaymentItem) {
   return { extended, paidAt };
 }
 
+function getBookingParties(payment: PaymentItem, enrichedBooking?: unknown) {
+  const p = payment as PaymentItem & {
+    customer?: { name?: string };
+    booking?: {
+      service?: { title?: string; name?: string };
+      customer?: { name?: string };
+      technician?: { name?: string };
+      serviceName?: string;
+    };
+    serviceName?: string;
+    customerName?: string;
+    technicianName?: string;
+  };
+  const booking = (enrichedBooking || p.booking) as
+    | {
+        service?: { title?: string; name?: string };
+        customer?: { name?: string };
+        technician?: { name?: string };
+        serviceName?: string;
+      }
+    | undefined;
+  return {
+    service: booking?.service?.title || booking?.service?.name || booking?.serviceName || p.serviceName || "",
+    customer: p.customer?.name || booking?.customer?.name || p.customerName || "",
+    technician: booking?.technician?.name || p.technicianName || "",
+  };
+}
+
 export default function PaymentDetailPage() {
   const params = useParams<{ id: string }>();
   const [payment, setPayment] = useState<PaymentItem | null>(null);
+  const [enrichedBooking, setEnrichedBooking] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,7 +71,18 @@ export default function PaymentDetailPage() {
 
       try {
         const response = await paymentService.detail(params.id);
-        setPayment(response?.payment || response?.data || response || null);
+        const payment = response?.payment || response?.data || response || null;
+        setPayment(payment);
+
+        if (payment?.bookingId) {
+          try {
+            const bookingResponse = await bookingService.detail(payment.bookingId);
+            const booking = (bookingResponse?.booking || bookingResponse?.data || bookingResponse || {}) as unknown;
+            setEnrichedBooking(booking);
+          } catch {
+            /* enrichment is best-effort */
+          }
+        }
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : "Could not load payment");
       } finally {
@@ -74,6 +115,7 @@ export default function PaymentDetailPage() {
   }
 
   const { extended, paidAt } = getMeta(payment);
+  const { service, customer, technician } = getBookingParties(payment, enrichedBooking || undefined);
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
@@ -85,11 +127,11 @@ export default function PaymentDetailPage() {
       </div>
 
       <section className="surface-card mt-6 p-6 sm:p-8">
-        <div className="inline-flex items-center gap-2 rounded-full bg-accent-soft px-3 py-1 text-sm font-medium text-accent-strong">
+        {/* <div className="inline-flex items-center gap-2 rounded-full bg-accent-soft px-3 py-1 text-sm font-medium text-accent-strong">
           <CreditCard className="h-4 w-4" /> Payment details
-        </div>
+        </div> */}
         <h1 className="mt-4 text-4xl font-semibold tracking-tight text-foreground">
-          Transaction for booking #{payment.bookingId || "N/A"}
+          Transaction details
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-7 text-text-muted">
           Review the amount, booking reference, and current status of this transaction.
@@ -107,9 +149,21 @@ export default function PaymentDetailPage() {
             {status || "PAID"}
           </p>
         </div>
-        <div className="rounded-3xl border border-border bg-slate-50 p-5">
+        {/* <div className="rounded-3xl border border-border bg-slate-50 p-5">
           <p className="text-sm text-text-muted">Booking</p>
           <p className="mt-2 font-semibold text-foreground">#{payment.bookingId || "N/A"}</p>
+        </div> */}
+        <div className="rounded-3xl border border-border bg-slate-50 p-5">
+          <p className="text-sm text-text-muted">Service</p>
+          <p className="mt-2 font-semibold text-foreground">{service || "—"}</p>
+        </div>
+        <div className="rounded-3xl border border-border bg-slate-50 p-5">
+          <p className="text-sm text-text-muted">Customer</p>
+          <p className="mt-2 font-semibold text-foreground">{customer || "—"}</p>
+        </div>
+        <div className="rounded-3xl border border-border bg-slate-50 p-5">
+          <p className="text-sm text-text-muted">Technician</p>
+          <p className="mt-2 font-semibold text-foreground">{technician || "—"}</p>
         </div>
         <div className="rounded-3xl border border-border bg-slate-50 p-5">
           <p className="text-sm text-text-muted">Transaction ID</p>

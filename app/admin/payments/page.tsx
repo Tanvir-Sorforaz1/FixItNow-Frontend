@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { paymentService } from "@/services/payment.service";
+import { bookingService } from "@/services/booking.service";
 import { PaymentItem } from "@/types";
 import { ArrowRight, CreditCard } from "lucide-react";
 import Link from "next/link";
@@ -20,14 +21,82 @@ function getMeta(payment: PaymentItem) {
   return { extended, paidAt };
 }
 
+function getBookingParties(payment: PaymentItem, enrichedBooking?: unknown) {
+  const p = payment as PaymentItem & {
+    customer?: { name?: string };
+    booking?: {
+      service?: { title?: string; name?: string };
+      customer?: { name?: string };
+      technician?: { name?: string };
+      serviceName?: string;
+    };
+    serviceName?: string;
+    customerName?: string;
+    technicianName?: string;
+  };
+  const booking = (enrichedBooking || p.booking) as
+    | {
+        service?: { title?: string; name?: string };
+        customer?: { name?: string };
+        technician?: { name?: string };
+        serviceName?: string;
+      }
+    | undefined;
+  return {
+    service: booking?.service?.title || booking?.service?.name || booking?.serviceName || p.serviceName || "",
+    customer: p.customer?.name || booking?.customer?.name || p.customerName || "",
+    technician: booking?.technician?.name || p.technicianName || "",
+  };
+}
+
+function needsBookingEnrichment(payment: PaymentItem) {
+  const parties = getBookingParties(payment);
+  const hasEmbedded = Boolean(
+    (payment as { booking?: unknown }).booking &&
+      (parties.service || parties.customer || parties.technician)
+  );
+  return !hasEmbedded && Boolean(payment.bookingId);
+}
+
+async function enrichPaymentBookings(payments: PaymentItem[]) {
+  const map: Record<string, unknown> = {};
+  const pending = payments.filter(needsBookingEnrichment);
+  const results = await Promise.allSettled(
+    pending.map(async (payment) => {
+      const response = await bookingService.detail(payment.bookingId as string);
+      const booking = (response?.booking || response?.data || response || {}) as unknown;
+      return [payment.bookingId, booking] as const;
+    })
+  );
+  results.forEach((result) => {
+    if (result.status === "fulfilled" && result.value) {
+      const [bookingId, booking] = result.value;
+      map[bookingId as string] = booking;
+    }
+  });
+  return map;
+}
+
 export default function AdminPaymentsPage() {
   const [payments, setPayments] = useState<PaymentItem[]>([]);
+  const [enrichMap, setEnrichMap] = useState<Record<string, unknown>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
-      const response = await paymentService.list();
-      setPayments(response?.payments || response?.data || []);
+      try {
+        const response = await paymentService.list();
+        const list = response?.payments || response?.data || [];
+        setPayments(list);
+        try {
+          const map = await enrichPaymentBookings(list);
+          setEnrichMap((prev) => ({ ...prev, ...map }));
+        } catch {
+          /* enrichment is best-effort */
+        }
+      } catch {
+        /* ignore list errors */
+      }
       setLoading(false);
     };
 
@@ -55,13 +124,21 @@ export default function AdminPaymentsPage() {
             {payments.map((payment) => {
               const status = String(payment.status || "").toUpperCase();
               const { extended, paidAt } = getMeta(payment);
+              const { service, customer, technician } = getBookingParties(payment, payment.bookingId ? enrichMap[payment.bookingId] : undefined);
               return (
               <article key={payment.id} className="flex flex-col gap-4 rounded-3xl border border-border bg-slate-50 p-5 md:flex-row md:items-center md:justify-between">
                 <div className="min-w-0">
                   <p className="text-lg font-semibold text-foreground">৳{payment.amount ?? 0}</p>
-                  <p className="mt-1 text-sm text-text-muted">Booking #{payment.bookingId || "N/A"}</p>
+                  {/* <p className="mt-1 text-sm text-text-muted">Booking #{payment.bookingId || "N/A"}</p> */}
+                  {service && <p className="mt-1 text-sm font-semibold text-foreground">{service}</p>}
+                  {(customer || technician) && (
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-text-muted">
+                      {customer && <span>Customer: {customer}</span>}
+                      {technician && <span>Technician: {technician}</span>}
+                    </div>
+                  )}
                   <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs uppercase tracking-[0.12em] text-text-muted">
-                    {extended.transactionId && <span>Tx {extended.transactionId}</span>}
+                    {/* {extended.transactionId && <span>Tx {extended.transactionId}</span>} */}
                     {extended.method && <span>{extended.method}</span>}
                     {extended.provider && <span>{extended.provider}</span>}
                     {paidAt && <span>{paidAt}</span>}
