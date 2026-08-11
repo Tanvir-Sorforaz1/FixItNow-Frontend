@@ -5,9 +5,35 @@ import Link from "next/link";
 import { bookingService } from "@/services/booking.service";
 import { technicianService } from "@/services/technician.service";
 import { BookingItem } from "@/types";
-import { ArrowRight, Clock3, Search, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowRight, Clock3, MapPin, Search, ShieldCheck, Sparkles } from "lucide-react";
 
 const tabs = ["ALL", "REQUESTED", "ACCEPTED", "PAID", "IN_PROGRESS", "COMPLETED", "DECLINED"] as const;
+
+function getBookingTitle(booking: BookingItem) {
+  return booking.serviceName || (booking as { service?: { title?: string } }).service?.title || "Booking request";
+}
+
+function getScheduledAt(booking: BookingItem) {
+  const scheduledAt = (booking as { scheduledAt?: string }).scheduledAt;
+  if (!scheduledAt) return booking.date || "";
+  try {
+    const date = new Date(scheduledAt);
+    if (isNaN(date.getTime())) return scheduledAt;
+    return date.toLocaleString(undefined, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return scheduledAt;
+  }
+}
+
+function getBookingAddress(booking: BookingItem) {
+  return (booking as { address?: string }).address || "";
+}
 
 export default function TechnicianBookingsPage() {
   const [bookings, setBookings] = useState<BookingItem[]>([]);
@@ -29,7 +55,7 @@ export default function TechnicianBookingsPage() {
     const normalized = query.trim().toLowerCase();
     return bookings.filter((booking) => {
       const status = String(booking.status || "").toUpperCase();
-      const title = String(booking.serviceName || "").toLowerCase();
+      const title = getBookingTitle(booking).toLowerCase();
       return (activeTab === "ALL" || status === activeTab) && (!normalized || title.includes(normalized) || status.toLowerCase().includes(normalized));
     });
   }, [activeTab, bookings, query]);
@@ -87,9 +113,20 @@ export default function TechnicianBookingsPage() {
 
               return (
                 <article key={booking.id} className="flex flex-col gap-4 rounded-[28px] border border-border bg-slate-50 p-5 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <p className="text-lg font-semibold text-foreground">{booking.serviceName || "Booking request"}</p>
-                    <p className="mt-1 text-sm text-text-muted">{booking.date || "Scheduled soon"}</p>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <p className="text-lg font-semibold text-foreground">{getBookingTitle(booking)}</p>
+                      {typeof booking.amount === "number" && <span className="font-semibold text-accent">৳{booking.amount}</span>}
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-text-muted">
+                      {(getScheduledAt(booking)) && (
+                        <span className="inline-flex items-center gap-1.5"><Clock3 className="h-4 w-4 text-accent" /> {getScheduledAt(booking)}</span>
+                      )}
+                      {getBookingAddress(booking) && (
+                        <span className="inline-flex max-w-full items-center gap-1.5 truncate"><MapPin className="h-4 w-4 shrink-0 text-accent" /> {getBookingAddress(booking)}</span>
+                      )}
+                      {!getScheduledAt(booking) && !getBookingAddress(booking) && <span>Scheduled soon</span>}
+                    </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-3">
                     <span className="rounded-full bg-warning-soft px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-warning-strong">{status}</span>

@@ -22,6 +22,15 @@ export default function AdminCategoriesPage() {
   }, []);
 
   const addCategory = async () => {
+    if (!name.trim()) {
+      const { default: Swal } = await import("sweetalert2");
+      await Swal.fire({
+        icon: "warning",
+        title: "Category name is required.",
+      });
+      return;
+    }
+
     await adminService.createCategory({ name, description });
     const response = await adminService.getCategories();
     setCategories(response?.categories || response?.data || []);

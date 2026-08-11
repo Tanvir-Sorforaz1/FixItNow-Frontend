@@ -115,20 +115,20 @@ export default function RegisterPage() {
             })}
           </div>
 
-          <div className="mt-8 rounded-3xl border border-border bg-slate-50 p-4 text-sm text-text-muted">
+          {/* <div className="mt-8 rounded-3xl border border-border bg-slate-50 p-4 text-sm text-text-muted">
             <p className="flex items-center gap-2 text-foreground">
               <ShieldCheck className="h-4 w-4 text-success" /> Role-aware onboarding and redirects.
             </p>
             <p className="mt-2 flex items-center gap-2">
               <BadgeCheck className="h-4 w-4 text-accent" /> Technician accounts can complete profile setup after signup.
             </p>
-          </div>
+          </div> */}
         </section>
 
         <section className="hero-gradient rounded-[32px] p-6 text-white shadow-[var(--shadow-lg)] sm:p-8 lg:order-1">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm text-white/90">
+          {/* <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm text-white/90">
             <Sparkles className="h-4 w-4 text-orange-300" /> Trusted access for every role
-          </div>
+          </div> */}
 
           <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-5 rounded-[28px] bg-white p-6 text-foreground shadow-[var(--shadow-lg)] sm:p-8">
             <div>

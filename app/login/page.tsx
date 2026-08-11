@@ -69,10 +69,10 @@ export default function LoginPage() {
     <main className="min-h-screen px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-6xl items-center gap-8 lg:grid-cols-[1.05fr_0.95fr]">
         <section className="hero-gradient hidden overflow-hidden rounded-[32px] p-8 text-white shadow-[var(--shadow-lg)] lg:block">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm text-white/90">
+          {/* <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm text-white/90">
             <Sparkles className="h-4 w-4 text-orange-300" />
             Trusted access for customers, technicians, and admins
-          </div>
+          </div> */}
           <div className="mt-8 flex h-full flex-col justify-between gap-10">
             <div>
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10">
@@ -129,14 +129,14 @@ export default function LoginPage() {
               {errors.password && <p className="mt-1 text-sm text-danger">Password is required.</p>}
             </div>
 
-            <div className="rounded-3xl border border-border bg-slate-50 p-4 text-sm text-text-muted">
+            {/* <div className="rounded-3xl border border-border bg-slate-50 p-4 text-sm text-text-muted">
               <p className="flex items-center gap-2 text-foreground">
                 <ShieldCheck className="h-4 w-4 text-success" /> Secure JWT-based session handling.
               </p>
               <p className="mt-2 flex items-center gap-2">
                 <BadgeCheck className="h-4 w-4 text-accent" /> Role-aware redirects after login.
               </p>
-            </div>
+            </div> */}
 
             {serverError && <p className="rounded-2xl border border-danger/20 bg-danger-soft px-4 py-3 text-sm text-danger">{serverError}</p>}
 

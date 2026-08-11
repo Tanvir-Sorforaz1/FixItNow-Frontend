@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { technicianService } from "@/services/technician.service";
 import { ArrowRight, BadgeCheck, Sparkles, User } from "lucide-react";
 
 export default function TechnicianProfilePage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -41,7 +43,15 @@ export default function TechnicianProfilePage() {
         ...form,
         skills: form.skills.split(",").map((skill) => skill.trim()).filter(Boolean),
       });
-      alert("Profile saved.");
+
+      const { default: Swal } = await import("sweetalert2");
+      await Swal.fire({
+        icon: "success",
+        title: "Profile saved",
+        text: "Your profile has been updated successfully.",
+        confirmButtonText: "Go to dashboard",
+      });
+      router.push("/technician/dashboard");
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Could not save profile");
     } finally {

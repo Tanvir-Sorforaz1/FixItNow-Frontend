@@ -77,7 +77,13 @@ export default function TechnicianAvailabilityPage() {
     setSaving(true);
     try {
       await technicianService.updateAvailability(availability);
-      alert("Availability saved.");
+
+      const { default: Swal } = await import("sweetalert2");
+      await Swal.fire({
+        icon: "success",
+        title: "Availability saved",
+        text: "Your availability has been updated successfully.",
+      });
     } finally {
       setSaving(false);
     }

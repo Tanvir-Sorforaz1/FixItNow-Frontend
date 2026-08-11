@@ -36,7 +36,13 @@ export default function CustomerProfilePage() {
     setError(null);
     try {
       await userService.updateMe(form);
-      alert("Profile saved.");
+
+      const { default: Swal } = await import("sweetalert2");
+      await Swal.fire({
+        icon: "success",
+        title: "Profile saved",
+        text: "Your profile has been updated successfully.",
+      });
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Could not save profile");
     } finally {

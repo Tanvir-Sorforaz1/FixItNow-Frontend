@@ -7,7 +7,66 @@ import { bookingService } from "@/services/booking.service";
 import { technicianService } from "@/services/technician.service";
 import { paymentService } from "@/services/payment.service";
 import { BookingItem } from "@/types";
-import { Clock3, ShieldCheck, Sparkles, Wrench } from "lucide-react";
+import { Clock3, MapPin, NotebookText, ShieldCheck, Wrench } from "lucide-react";
+
+function getBookingTitle(booking: BookingItem) {
+  return (
+    booking.serviceName ||
+    (booking as { service?: { title?: string } }).service?.title ||
+    "Booking"
+  );
+}
+
+function getServiceDescription(booking: BookingItem) {
+  return (booking as { service?: { description?: string } }).service?.description || "";
+}
+
+function getServicePrice(booking: BookingItem) {
+  const servicePrice = (booking as { service?: { price?: number } }).service?.price;
+  return typeof servicePrice === "number" ? servicePrice : undefined;
+}
+
+function getBookingAddress(booking: BookingItem) {
+  return (booking as { address?: string }).address || "";
+}
+
+function getBookingNotes(booking: BookingItem) {
+  return (booking as { notes?: string }).notes || "";
+}
+
+function getScheduledAt(booking: BookingItem): string {
+  const scheduledAt = (booking as { scheduledAt?: string }).scheduledAt;
+  if (!scheduledAt) return booking.date || "";
+  try {
+    const date = new Date(scheduledAt);
+    if (isNaN(date.getTime())) return scheduledAt;
+    return date.toLocaleString(undefined, {
+      weekday: "short",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return scheduledAt;
+  }
+}
+
+function getDurationMinutes(booking: BookingItem): number | undefined {
+  const minutes = (booking as { durationMinutes?: number }).durationMinutes;
+  return typeof minutes === "number" && minutes > 0 ? minutes : undefined;
+}
+
+function getCustomerName(booking: BookingItem): string {
+  const customer = (booking as { customer?: { name?: string } }).customer;
+  return customer?.name || "";
+}
+
+function getCustomerPhone(booking: BookingItem): string {
+  const customer = (booking as { customer?: { phone?: string } }).customer;
+  return customer?.phone || "";
+}
 
 export default function TechnicianBookingDetailPage() {
   const params = useParams<{ id: string }>();
@@ -72,8 +131,12 @@ export default function TechnicianBookingDetailPage() {
         <div className="inline-flex items-center gap-2 rounded-full bg-accent-soft px-3 py-1 text-sm font-medium text-accent-strong">
           <Wrench className="h-4 w-4" /> Booking detail
         </div>
-        <h1 className="mt-4 text-4xl font-semibold tracking-tight text-foreground">{booking.serviceName || "Booking"}</h1>
-        <p className="mt-3 text-sm text-text-muted">Technician view for status transitions and job completion.</p>
+        <h1 className="mt-4 text-4xl font-semibold tracking-tight text-foreground">{getBookingTitle(booking)}</h1>
+        {getServiceDescription(booking) && <p className="mt-3 max-w-2xl text-sm leading-7 text-text-muted">{getServiceDescription(booking)}</p>}
+        <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-text-muted">
+          {getCustomerName(booking) && <span className="inline-flex items-center gap-1.5 font-medium text-foreground">Customer: {getCustomerName(booking)}</span>}
+          {getCustomerPhone(booking) && <span>{getCustomerPhone(booking)}</span>}
+        </div>
       </section>
 
       <section className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -84,19 +147,43 @@ export default function TechnicianBookingDetailPage() {
               <p className="mt-2 font-semibold text-foreground">{status}</p>
             </div>
             <div className="rounded-3xl border border-border bg-slate-50 p-4">
-              <p className="text-sm text-text-muted">Date</p>
-              <p className="mt-2 font-semibold text-foreground inline-flex items-center gap-2"><Clock3 className="h-4 w-4 text-accent" /> {booking.date || "Pending"}</p>
+              <p className="text-sm text-text-muted">Scheduled</p>
+              <p className="mt-2 font-semibold text-foreground inline-flex items-center gap-2"><Clock3 className="h-4 w-4 text-accent" /> {getScheduledAt(booking) || "Pending"}</p>
             </div>
             <div className="rounded-3xl border border-border bg-slate-50 p-4">
-              <p className="text-sm text-text-muted">Amount</p>
-              <p className="mt-2 font-semibold text-foreground">৳{booking.amount ?? 0}</p>
+              <p className="text-sm text-text-muted">Est. duration</p>
+              <p className="mt-2 font-semibold text-foreground">{getDurationMinutes(booking) ? `${getDurationMinutes(booking)} min` : "Not set"}</p>
             </div>
           </div>
 
-          <div className="mt-6 rounded-3xl border border-border bg-slate-50 p-5 text-sm text-text-muted">
-            <Sparkles className="mb-2 h-4 w-4 text-accent" />
-            Review notes, customer address, and chat can be added once those APIs are available.
+          <div className="mt-6 grid gap-4 md:grid-cols-2">
+            <div className="rounded-3xl border border-border bg-slate-50 p-5">
+              <p className="text-sm font-semibold uppercase tracking-[0.24em] text-text-muted">Booking amount</p>
+              <p className="mt-3 text-2xl font-bold text-foreground">৳{booking.amount ?? 0}</p>
+              {getServicePrice(booking) !== undefined && getServicePrice(booking) !== booking.amount && (
+                <p className="mt-1 text-xs text-text-muted">Service list price: ৳{getServicePrice(booking)}</p>
+              )}
+            </div>
+            <div className="rounded-3xl border border-border bg-slate-50 p-5">
+              <p className="text-sm font-semibold uppercase tracking-[0.24em] text-text-muted">Booking ID</p>
+              <p className="mt-3 text-sm break-all font-semibold text-foreground">{booking.id}</p>
+              <p className="mt-1 text-xs text-text-muted">Use this when confirming payment with the customer.</p>
+            </div>
           </div>
+
+          {getBookingAddress(booking) && (
+            <div className="mt-6 rounded-3xl border border-border bg-slate-50 p-5">
+              <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.24em] text-text-muted"><MapPin className="h-4 w-4 text-accent" /> Job address</p>
+              <p className="mt-3 whitespace-pre-line text-sm leading-7 text-foreground">{getBookingAddress(booking)}</p>
+            </div>
+          )}
+
+          {getBookingNotes(booking) && (
+            <div className="mt-6 rounded-3xl border border-border bg-slate-50 p-5">
+              <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.24em] text-text-muted"><NotebookText className="h-4 w-4 text-accent" /> Notes from customer</p>
+              <p className="mt-3 whitespace-pre-line text-sm leading-7 text-foreground">{getBookingNotes(booking)}</p>
+            </div>
+          )}
         </div>
 
         <aside className="surface-card p-6 sm:p-8">

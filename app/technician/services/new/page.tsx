@@ -4,13 +4,16 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { serviceService } from "@/services/service.service";
 import { categoryService } from "@/services/category.service";
+import { technicianService } from "@/services/technician.service";
 import { CategoryItem } from "@/types";
 import { ArrowRight, Sparkles } from "lucide-react";
 
 export default function NewTechnicianServicePage() {
   const router = useRouter();
   const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<CategoryItem[]>([]);
+  const [technicianProfileId, setTechnicianProfileId] = useState<string | null>(null);
   const [form, setForm] = useState({ title: "", description: "", price: "", location: "", category: "" });
 
   useEffect(() => {
@@ -21,6 +24,14 @@ export default function NewTechnicianServicePage() {
       } catch {
         setCategories([]);
       }
+
+      try {
+        const profileResponse = await technicianService.profile();
+        const profile = profileResponse?.profile || profileResponse?.data || {};
+        setTechnicianProfileId(profile?.id || null);
+      } catch {
+        setTechnicianProfileId(null);
+      }
     };
 
     load();
@@ -28,17 +39,25 @@ export default function NewTechnicianServicePage() {
 
   const handleSave = async () => {
     setIsSaving(true);
+    setError(null);
+
     try {
+      if (!technicianProfileId) {
+        throw new Error("No technician profile found. Complete your profile before listing a service.");
+      }
+
       const response = await serviceService.create({
-        name: form.title,
+        title: form.title,
         description: form.description,
         price: Number(form.price || 0),
         location: form.location,
-        category: form.category,
+        categoryId: form.category,
+        technicianProfileId,
         isActive: true,
       });
-      const serviceId = response?.service?.id || response?.data?.id || response?.id;
-      router.push(serviceId ? `/technician/services/${serviceId}/edit` : "/technician/services");
+      router.push("/technician/services");
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Could not create the service.");
     } finally {
       setIsSaving(false);
     }
@@ -72,7 +91,7 @@ export default function NewTechnicianServicePage() {
             >
               <option value="">Select a category</option>
               {categories.map((category) => (
-                <option key={category.id} value={category.name}>
+                <option key={category.id} value={category.id}>
                   {category.name}
                 </option>
               ))}
@@ -88,6 +107,8 @@ export default function NewTechnicianServicePage() {
           <label className="mb-2 block text-sm font-medium text-foreground">Description</label>
           <textarea value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} className="input-field min-h-40" />
         </div>
+
+        {error && <div className="mt-4 rounded-2xl border border-danger/20 bg-danger-soft px-4 py-3 text-sm text-danger">{error}</div>}
 
         <button type="button" onClick={handleSave} disabled={isSaving} className="btn-primary mt-6 py-3 disabled:opacity-50">
           {isSaving ? "Saving..." : "Create service"}
