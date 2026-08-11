@@ -15,6 +15,20 @@ function getStatusTone(status: string) {
   return "bg-slate-200 text-text-muted";
 }
 
+function getMeta(payment: PaymentItem) {
+  const extended = payment as PaymentItem & { transactionId?: string; method?: string; provider?: string; paidAt?: string; currency?: string };
+  let paidAt = extended.paidAt || "";
+  if (paidAt) {
+    try {
+      const date = new Date(paidAt);
+      if (!isNaN(date.getTime())) paidAt = date.toLocaleString(undefined, { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    } catch {
+      /* keep raw */
+    }
+  }
+  return { extended, paidAt };
+}
+
 export default function PaymentDetailPage() {
   const params = useParams<{ id: string }>();
   const [payment, setPayment] = useState<PaymentItem | null>(null);
@@ -59,6 +73,8 @@ export default function PaymentDetailPage() {
     );
   }
 
+  const { extended, paidAt } = getMeta(payment);
+
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="flex flex-wrap items-center gap-3">
@@ -80,7 +96,7 @@ export default function PaymentDetailPage() {
         </p>
       </section>
 
-      <section className="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <section className="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <div className="rounded-3xl border border-border bg-slate-50 p-5">
           <p className="text-sm text-text-muted">Amount</p>
           <p className="mt-2 font-semibold text-foreground">৳{payment.amount ?? 0}</p>
@@ -94,6 +110,18 @@ export default function PaymentDetailPage() {
         <div className="rounded-3xl border border-border bg-slate-50 p-5">
           <p className="text-sm text-text-muted">Booking</p>
           <p className="mt-2 font-semibold text-foreground">#{payment.bookingId || "N/A"}</p>
+        </div>
+        <div className="rounded-3xl border border-border bg-slate-50 p-5">
+          <p className="text-sm text-text-muted">Transaction ID</p>
+          <p className="mt-2 break-all font-semibold text-foreground">{extended.transactionId || "—"}</p>
+        </div>
+        <div className="rounded-3xl border border-border bg-slate-50 p-5">
+          <p className="text-sm text-text-muted">Method</p>
+          <p className="mt-2 font-semibold text-foreground">{extended.method ? `${extended.method}${extended.provider ? ` · ${extended.provider}` : ""}${extended.currency ? ` · ${extended.currency}` : ""}` : "—"}</p>
+        </div>
+        <div className="rounded-3xl border border-border bg-slate-50 p-5">
+          <p className="text-sm text-text-muted">Paid at</p>
+          <p className="mt-2 font-semibold text-foreground">{paidAt || "—"}</p>
         </div>
         <div className="rounded-3xl border border-border bg-slate-50 p-5">
           <p className="text-sm text-text-muted">Created</p>

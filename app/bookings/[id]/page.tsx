@@ -22,6 +22,42 @@ function getBookingTitle(booking: BookingItem) {
   return booking.serviceName || (booking as unknown as { service?: { name?: string }; title?: string }).service?.name || (booking as unknown as { title?: string }).title || "Booking";
 }
 
+function getServiceDescription(booking: BookingItem) {
+  return (booking as { service?: { description?: string } }).service?.description || "";
+}
+
+function getScheduledAt(booking: BookingItem): string {
+  const scheduledAt = (booking as { scheduledAt?: string }).scheduledAt;
+  if (!scheduledAt) return booking.date || "";
+  try {
+    const date = new Date(scheduledAt);
+    if (isNaN(date.getTime())) return scheduledAt;
+    return date.toLocaleString(undefined, {
+      weekday: "short",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return scheduledAt;
+  }
+}
+
+function getDurationMinutes(booking: BookingItem): number | undefined {
+  const minutes = (booking as { durationMinutes?: number }).durationMinutes;
+  return typeof minutes === "number" && minutes > 0 ? minutes : undefined;
+}
+
+function getBookingAddress(booking: BookingItem) {
+  return (booking as { address?: string }).address || "";
+}
+
+function getBookingNotes(booking: BookingItem) {
+  return (booking as { notes?: string }).notes || "";
+}
+
 const stepOrder = ["REQUESTED", "ACCEPTED", "IN_PROGRESS", "COMPLETED"];
 
 export default function BookingDetailPage() {
@@ -157,21 +193,47 @@ export default function BookingDetailPage() {
                 <p className="mt-2 font-semibold text-foreground">{getBookingTitle(booking)}</p>
               </div>
               <div className="rounded-3xl border border-border bg-slate-50 p-4">
-                <p className="text-sm text-text-muted">Date</p>
-                <p className="mt-2 font-semibold text-foreground inline-flex items-center gap-2"><Clock3 className="h-4 w-4 text-accent" /> {booking.date || "Pending"}</p>
+                <p className="text-sm text-text-muted">Scheduled</p>
+                <p className="mt-2 font-semibold text-foreground inline-flex items-center gap-2"><Clock3 className="h-4 w-4 text-accent" /> {getScheduledAt(booking) || "Pending"}</p>
+                {getDurationMinutes(booking) && <p className="mt-1 text-xs text-text-muted">~{getDurationMinutes(booking)} min job</p>}
               </div>
               <div className="rounded-3xl border border-border bg-slate-50 p-4">
                 <p className="text-sm text-text-muted">Amount</p>
                 <p className="mt-2 font-semibold text-foreground">৳{booking.amount ?? 0}</p>
               </div>
             </div>
+
+            {getServiceDescription(booking) && (
+              <div className="mt-6 rounded-3xl border border-border bg-slate-50 p-5">
+                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-text-muted">About this service</p>
+                <p className="mt-3 text-sm leading-7 text-foreground">{getServiceDescription(booking)}</p>
+              </div>
+            )}
+
+            {getBookingAddress(booking) && (
+              <div className="mt-6 rounded-3xl border border-border bg-slate-50 p-5">
+                <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.24em] text-text-muted"><MapPin className="h-4 w-4 text-accent" /> Job address</p>
+                <p className="mt-3 whitespace-pre-line text-sm leading-7 text-foreground">{getBookingAddress(booking)}</p>
+              </div>
+            )}
+
+            {getBookingNotes(booking) && (
+              <div className="mt-6 rounded-3xl border border-border bg-slate-50 p-5">
+                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-text-muted">Notes you left</p>
+                <p className="mt-3 whitespace-pre-line text-sm leading-7 text-foreground">{getBookingNotes(booking)}</p>
+              </div>
+            )}
           </div>
 
           <div className="surface-card p-6 sm:p-8">
             <h2 className="text-2xl font-semibold text-foreground">Technician</h2>
             <div className="mt-4 rounded-3xl border border-border bg-slate-50 p-5">
               <p className="text-lg font-semibold text-foreground">{toDisplayText(booking.technicianName, "Technician")}</p>
-              <p className="mt-2 text-sm text-text-muted">Contact, profile, and messaging can be layered in once chat support is available.</p>
+              {(() => {
+                const technician = (booking as { technician?: { name?: string; phone?: string } }).technician;
+                const phone = technician?.phone || (booking as { technicianPhone?: string }).technicianPhone;
+                return phone ? <p className="mt-2 text-sm text-text-muted">Contact: {phone}</p> : null;
+              })()}
             </div>
           </div>
 
@@ -199,11 +261,16 @@ export default function BookingDetailPage() {
           </div>
 
           <div className="surface-card p-6 sm:p-8">
-            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-text-muted">Booking notes</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-text-muted">Booking summary</p>
             <div className="mt-4 space-y-3 text-sm text-text-muted">
-              <p className="inline-flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-success" /> Payments become visible after acceptance.</p>
-              <p className="inline-flex items-center gap-2"><MapPin className="h-4 w-4 text-accent" /> Address and notes will appear here once the booking form is completed.</p>
-              <p className="inline-flex items-center gap-2"><Star className="h-4 w-4 text-warning-strong" /> Review prompt appears after completion.</p>
+              <p className="inline-flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-success" /> Amount ৳{booking.amount ?? 0} — payments become visible after acceptance.</p>
+              {getBookingAddress(booking) ? (
+                <p className="inline-flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-accent" /> Job address confirmed for this booking.</p>
+              ) : (
+                <p className="inline-flex items-center gap-2"><MapPin className="h-4 w-4 text-accent" /> Job address will be confirmed before the technician arrives.</p>
+              )}
+              {getBookingNotes(booking) && <p className="inline-flex items-center gap-2"><Star className="h-4 w-4 text-warning-strong" /> You left notes for the technician.</p>}
+              {getDurationMinutes(booking) && <p className="inline-flex items-center gap-2"><Clock3 className="h-4 w-4 text-accent" /> Estimated {getDurationMinutes(booking)} minutes.</p>}
             </div>
           </div>
         </aside>

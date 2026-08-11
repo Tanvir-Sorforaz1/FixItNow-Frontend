@@ -3,8 +3,22 @@
 import { useEffect, useState } from "react";
 import { paymentService } from "@/services/payment.service";
 import { PaymentItem } from "@/types";
-import { ArrowRight, CreditCard, ShieldCheck } from "lucide-react";
+import { ArrowRight, CreditCard } from "lucide-react";
 import Link from "next/link";
+
+function getMeta(payment: PaymentItem) {
+  const extended = payment as PaymentItem & { transactionId?: string; method?: string; provider?: string; paidAt?: string; currency?: string };
+  let paidAt = extended.paidAt || "";
+  if (paidAt) {
+    try {
+      const date = new Date(paidAt);
+      if (!isNaN(date.getTime())) paidAt = date.toLocaleString(undefined, { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    } catch {
+      /* keep raw */
+    }
+  }
+  return { extended, paidAt };
+}
 
 export default function AdminPaymentsPage() {
   const [payments, setPayments] = useState<PaymentItem[]>([]);
@@ -40,11 +54,18 @@ export default function AdminPaymentsPage() {
           <div className="space-y-4">
             {payments.map((payment) => {
               const status = String(payment.status || "").toUpperCase();
+              const { extended, paidAt } = getMeta(payment);
               return (
               <article key={payment.id} className="flex flex-col gap-4 rounded-3xl border border-border bg-slate-50 p-5 md:flex-row md:items-center md:justify-between">
-                <div>
+                <div className="min-w-0">
                   <p className="text-lg font-semibold text-foreground">৳{payment.amount ?? 0}</p>
                   <p className="mt-1 text-sm text-text-muted">Booking #{payment.bookingId || "N/A"}</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs uppercase tracking-[0.12em] text-text-muted">
+                    {extended.transactionId && <span>Tx {extended.transactionId}</span>}
+                    {extended.method && <span>{extended.method}</span>}
+                    {extended.provider && <span>{extended.provider}</span>}
+                    {paidAt && <span>{paidAt}</span>}
+                  </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <span

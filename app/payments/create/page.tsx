@@ -7,6 +7,37 @@ import { paymentService } from "@/services/payment.service";
 import { BookingItem } from "@/types";
 import { ArrowRight, CheckCircle2, CreditCard, ShieldCheck, Sparkles } from "lucide-react";
 
+function getBookingTitle(booking: BookingItem) {
+  return booking.serviceName || (booking as { service?: { title?: string } }).service?.title || "Service booking";
+}
+
+function getServiceDescription(booking: BookingItem) {
+  return (booking as { service?: { description?: string } }).service?.description || "";
+}
+
+function getScheduledAt(booking: BookingItem) {
+  const scheduledAt = (booking as { scheduledAt?: string }).scheduledAt;
+  if (!scheduledAt) return booking.date || "";
+  try {
+    const date = new Date(scheduledAt);
+    if (isNaN(date.getTime())) return scheduledAt;
+    return date.toLocaleString(undefined, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return scheduledAt;
+  }
+}
+
+function getTechName(booking: BookingItem) {
+  const technician = (booking as { technician?: { name?: string } }).technician;
+  return technician?.name || booking.technicianName || "";
+}
+
 export default function CreatePaymentPage() {
   const searchParams = useSearchParams();
   const bookingId = searchParams.get("bookingId") || "";
@@ -169,7 +200,10 @@ return (
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-text-muted">Order summary</p>
           <div className="mt-4 space-y-4 rounded-3xl bg-slate-50 p-5">
             <p className="text-sm text-text-muted">Booking</p>
-            <p className="font-semibold text-foreground">{booking.serviceName || "Service booking"}</p>
+            <p className="font-semibold text-foreground">{getBookingTitle(booking)}</p>
+            {getServiceDescription(booking) && <p className="text-sm leading-6 text-text-muted">{getServiceDescription(booking)}</p>}
+            {getScheduledAt(booking) && <p className="text-sm text-text-muted">Scheduled: {getScheduledAt(booking)}</p>}
+            {getTechName(booking) && <p className="text-sm text-text-muted">Technician: {getTechName(booking)}</p>}
             <p className="text-sm text-text-muted">Amount</p>
             <p className="font-semibold text-foreground">৳{booking.amount ?? 0}</p>
           </div>

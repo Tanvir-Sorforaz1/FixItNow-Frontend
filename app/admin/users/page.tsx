@@ -130,6 +130,18 @@ export default function AdminUsersPage() {
                 <div>
                   <p className="text-lg font-semibold text-foreground">{user.name}</p>
                   <p className="mt-1 text-sm text-text-muted">{user.email}</p>
+                  {(() => {
+                    const phone = (user as { phone?: string }).phone;
+                    const city = (user as { city?: string }).city;
+                    const address = (user as { address?: string }).address;
+                    const location = [city, address].filter(Boolean).join(", ");
+                    if (!phone && !location) return null;
+                    return (
+                      <p className="mt-1 text-xs uppercase tracking-[0.12em] text-text-muted">
+                        {[phone, location].filter(Boolean).join(" · ")}
+                      </p>
+                    );
+                  })()}
                   <p className="mt-1 text-xs uppercase tracking-[0.2em] text-text-muted">Joined {user.joinedAt || "recently"}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">

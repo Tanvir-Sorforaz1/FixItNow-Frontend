@@ -8,6 +8,41 @@ import { ArrowRight, Search, ShieldCheck } from "lucide-react";
 
 const statuses = ["ALL", "REQUESTED", "ACCEPTED", "IN_PROGRESS", "COMPLETED", "DECLINED", "CANCELLED"] as const;
 
+function getBookingTitle(booking: BookingItem) {
+  return booking.serviceName || (booking as { service?: { title?: string } }).service?.title || "Booking";
+}
+
+function getScheduledAt(booking: BookingItem) {
+  const scheduledAt = (booking as { scheduledAt?: string }).scheduledAt;
+  if (!scheduledAt) return booking.date || "";
+  try {
+    const date = new Date(scheduledAt);
+    if (isNaN(date.getTime())) return scheduledAt;
+    return date.toLocaleString(undefined, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return scheduledAt;
+  }
+}
+
+function getBookingAddress(booking: BookingItem) {
+  return (booking as { address?: string }).address || "";
+}
+
+function getCustomerName(booking: BookingItem) {
+  return (booking as { customer?: { name?: string } }).customer?.name || "";
+}
+
+function getTechName(booking: BookingItem) {
+  const technician = (booking as { technician?: { name?: string } }).technician;
+  return technician?.name || booking.technicianName || "";
+}
+
 export default function AdminBookingsPage() {
   const [bookings, setBookings] = useState<BookingItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,8 +63,8 @@ export default function AdminBookingsPage() {
     const normalized = query.trim().toLowerCase();
     return bookings.filter((booking) => {
       const status = String(booking.status || "").toUpperCase();
-      const title = String(booking.serviceName || "").toLowerCase();
-      const date = String(booking.date || "").toLowerCase();
+      const title = getBookingTitle(booking).toLowerCase();
+      const date = getScheduledAt(booking).toLowerCase();
       const matchesQuery = !normalized || title.includes(normalized) || date.includes(normalized) || status.toLowerCase().includes(normalized);
       const matchesStatus = statusFilter === "ALL" || status === statusFilter;
       return matchesQuery && matchesStatus;
@@ -69,9 +104,18 @@ export default function AdminBookingsPage() {
           <div className="space-y-4">
             {visibleBookings.map((booking) => (
               <article key={booking.id} className="flex flex-col gap-4 rounded-3xl border border-border bg-slate-50 p-5 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <p className="text-lg font-semibold text-foreground">{booking.serviceName || "Booking"}</p>
-                  <p className="mt-1 text-sm text-text-muted">{booking.date || "No date"}</p>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <p className="text-lg font-semibold text-foreground">{getBookingTitle(booking)}</p>
+                    {typeof booking.amount === "number" && <span className="font-semibold text-accent">৳{booking.amount}</span>}
+                  </div>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-text-muted">
+                    {getScheduledAt(booking) && <span>{getScheduledAt(booking)}</span>}
+                    {getCustomerName(booking) && <span>{getCustomerName(booking)}</span>}
+                    {getTechName(booking) && <span>{getTechName(booking)}</span>}
+                    {getBookingAddress(booking) && <span className="max-w-full truncate">{getBookingAddress(booking)}</span>}
+                    {!getScheduledAt(booking) && <span>No date</span>}
+                  </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
                   <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-text-muted">{String(booking.status || "REQUESTED")}</span>

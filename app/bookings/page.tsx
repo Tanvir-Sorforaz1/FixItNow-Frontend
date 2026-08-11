@@ -33,6 +33,24 @@ function getBookingTitle(booking: BookingItem) {
   );
 }
 
+function getScheduledAt(booking: BookingItem) {
+  const scheduledAt = (booking as { scheduledAt?: string }).scheduledAt;
+  if (!scheduledAt) return booking.date || "";
+  try {
+    const date = new Date(scheduledAt);
+    if (isNaN(date.getTime())) return scheduledAt;
+    return date.toLocaleString(undefined, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return scheduledAt;
+  }
+}
+
 
 export default function BookingsPage() {
   const [bookings, setBookings] = useState<BookingItem[]>([]);
@@ -137,7 +155,7 @@ export default function BookingsPage() {
                       (booking as BookingItem & { technician?: { name?: string } }).technician?.name,
                       "Technician"
                     )}
-                    {booking.date ? ` • ${booking.date}` : ""}
+                    {getScheduledAt(booking) ? ` • ${getScheduledAt(booking)}` : ""}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
