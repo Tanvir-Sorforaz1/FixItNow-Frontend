@@ -11,12 +11,18 @@ export default function TechnicianProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [form, setForm] = useState({ name: "", bio: "", hourlyRate: "", location: "", skills: "" });
+  const [isNewProfile, setIsNewProfile] = useState(false);
 
   useEffect(() => {
     const load = async () => {
       try {
         const response = await technicianService.profile();
         const profile = response?.profile || response?.data || {};
+        const hasProfileContent =
+          Boolean(profile?.name || profile?.bio || profile?.location || profile?.hourlyRate || profile?.skills);
+        if (hasProfileContent) {
+          setIsNewProfile(false);
+        }
         setForm({
           name: profile.name || "",
           bio: profile.bio || "",
@@ -25,7 +31,15 @@ export default function TechnicianProfilePage() {
           skills: Array.isArray(profile.skills) ? profile.skills.join(", ") : String(profile.skills || ""),
         });
       } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : "Could not load profile");
+        const message = loadError instanceof Error ? loadError.message : "Could not load profile";
+        // A technician who just signed up has no profile record yet, so the API
+        // responds with a "not found" error. That is expected — surface an empty,
+        // ready-to-fill form instead of a blocking error box.
+        if (/not found/i.test(message)) {
+          setIsNewProfile(true);
+        } else {
+          setError(message);
+        }
       } finally {
         setLoading(false);
       }
@@ -72,6 +86,12 @@ export default function TechnicianProfilePage() {
         <h1 className="mt-4 text-4xl font-semibold tracking-tight text-foreground">Complete your profile.</h1>
         <p className="mt-3 max-w-2xl text-sm leading-7 text-text-muted">This is the profile customers will see before they book you.</p>
       </section>
+
+      {isNewProfile && (
+        <section className="mt-8 rounded-2xl border border-accent/30 bg-accent-soft px-4 py-3 text-sm text-accent-strong">
+          Welcome! You haven&apos;t set up your technician profile yet — fill in the details below and hit &quot;Save profile&quot; to create it.
+        </section>
+      )}
 
       <section className="mt-8 surface-card p-6 sm:p-8">
         <div className="grid gap-4 md:grid-cols-2">
